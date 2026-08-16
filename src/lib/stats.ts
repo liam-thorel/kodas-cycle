@@ -1,4 +1,4 @@
-import { RELIEF_KINDS, OVERDUE_MINUTES } from '../config'
+import { RELIEF_KINDS, OVERDUE_MINUTES, isDurationKind } from '../config'
 import { dayKey } from './time'
 import type { EventKind, PuppyEvent } from '../types'
 
@@ -7,6 +7,8 @@ export type KindSummary = {
   last: PuppyEvent | null
   today: number
   perDay: number | null
+  /** Temps cumule aujourd'hui, pour les types a duree seulement. */
+  durationTodayMs: number | null
 }
 
 /** Dernier evenement d'un type donne (la liste arrive deja triee, recent en tete). */
@@ -37,12 +39,38 @@ export function averagePerDay(events: PuppyEvent[], kind: EventKind): number | n
   return total / byDay.size
 }
 
-export function summarize(events: PuppyEvent[], kind: EventKind): KindSummary {
+/**
+ * Temps total cumule aujourd'hui pour un type a duree. Une duree encore ouverte
+ * compte jusqu'a maintenant ; `null` si le type n'est pas mesure en duree.
+ */
+export function totalTodayMs(
+  events: PuppyEvent[],
+  kind: EventKind,
+  now: number = Date.now(),
+): number | null {
+  if (!isDurationKind(kind)) return null
+  const today = dayKey(new Date(now).toISOString())
+  let total = 0
+  for (const event of events) {
+    if (event.kind !== kind || dayKey(event.happenedAt) !== today) continue
+    const start = new Date(event.happenedAt).getTime()
+    const end = event.endedAt ? new Date(event.endedAt).getTime() : now
+    total += Math.max(0, end - start)
+  }
+  return total
+}
+
+export function summarize(
+  events: PuppyEvent[],
+  kind: EventKind,
+  now: number = Date.now(),
+): KindSummary {
   return {
     kind,
     last: lastOf(events, [kind]),
     today: countToday(events, kind),
     perDay: averagePerDay(events, kind),
+    durationTodayMs: totalTodayMs(events, kind, now),
   }
 }
 

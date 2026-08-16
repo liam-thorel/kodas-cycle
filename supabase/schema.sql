@@ -4,11 +4,18 @@
 create table if not exists public.events (
   id          uuid primary key,
   kind        text not null check (kind in ('pipi', 'caca', 'repas', 'promenade', 'dodo')),
+  -- Debut de l'evenement. Pour un type instantane, c'est le moment tout court.
   happened_at timestamptz not null,
+  -- Fin, pour les types a duree (promenade, dodo). NULL = instantane, ou en cours.
+  ended_at    timestamptz,
   author      text not null,
   note        text,
-  created_at  timestamptz not null default now()
+  created_at  timestamptz not null default now(),
+  constraint events_end_after_start check (ended_at is null or ended_at >= happened_at)
 );
+
+-- Si la table existait deja sans les durees, cette ligne suffit a la mettre a jour.
+alter table public.events add column if not exists ended_at timestamptz;
 
 create index if not exists events_happened_at_idx on public.events (happened_at desc);
 

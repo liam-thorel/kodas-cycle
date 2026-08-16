@@ -5,8 +5,8 @@ import { QuickLog } from './components/QuickLog'
 import { ReliefBanner } from './components/ReliefBanner'
 import { Stats } from './components/Stats'
 import { Timeline } from './components/Timeline'
-import { PUPPY_NAME } from './config'
-import { readAuthor, writeAuthor } from './lib/storage'
+import { DURATION_KINDS, PUPPY_NAME } from './config'
+import { readAuthor, writeAuthor, type StoredEvent } from './lib/storage'
 import { reliefStatus } from './lib/stats'
 import { useEvents } from './lib/useEvents'
 import type { EventKind, SyncStatus } from './types'
@@ -17,12 +17,13 @@ export function App() {
   const [author, setAuthor] = useState<string | null>(() => readAuthor())
   const [tab, setTab] = useState<Tab>('journal')
   const [justLogged, setJustLogged] = useState<EventKind | null>(null)
-  const { events, status, addEvent, removeEvent } = useEvents()
+  const { events, status, addEvent, patchEvent, removeEvent } = useEvents()
   // Fait avancer les durees affichees sans attendre une action de l'utilisateur.
+  // Un chrono de promenade doit bouger tout seul, d'ou le pas de 15 s.
   const [now, setNow] = useState(() => Date.now())
 
   useEffect(() => {
-    const id = window.setInterval(() => setNow(Date.now()), 30_000)
+    const id = window.setInterval(() => setNow(Date.now()), 15_000)
     return () => window.clearInterval(id)
   }, [])
 
@@ -44,6 +45,28 @@ export function App() {
   }
 
   const relief = reliefStatus(events, now)
+
+  // Les durees ouvertes, par type : elles pilotent l'etat des boutons.
+  const running: Partial<Record<EventKind, StoredEvent>> = {}
+  for (const event of events) {
+    if (DURATION_KINDS.includes(event.kind) && event.endedAt === null && !running[event.kind]) {
+      running[event.kind] = event
+    }
+  }
+
+  function startDuration(kind: EventKind) {
+    const already = running[kind]
+    // Deux "démarrer" d'affilee laisseraient une duree ouverte pour toujours :
+    // on ferme la precedente avant d'en ouvrir une nouvelle.
+    if (already) patchEvent(already.id, { endedAt: new Date().toISOString() })
+    addEvent({ kind, happenedAt: new Date().toISOString(), author: author! })
+    setNow(Date.now())
+  }
+
+  function stopDuration(event: StoredEvent) {
+    patchEvent(event.id, { endedAt: new Date().toISOString() })
+    setNow(Date.now())
+  }
 
   return (
     <div className="app">
@@ -74,11 +97,15 @@ export function App() {
 
       <QuickLog
         justLogged={justLogged}
+        now={now}
+        running={running}
         onLog={(kind) => {
           addEvent({ kind, happenedAt: new Date().toISOString(), author })
           setJustLogged(kind)
           setNow(Date.now())
         }}
+        onStart={startDuration}
+        onStop={stopDuration}
       />
 
       <ManualEntry author={author} onSubmit={addEvent} />
@@ -101,9 +128,9 @@ export function App() {
       </nav>
 
       {tab === 'journal' ? (
-        <Timeline events={events} onRemove={removeEvent} />
+        <Timeline events={events} now={now} onRemove={removeEvent} onStop={stopDuration} />
       ) : (
-        <Stats events={events} />
+        <Stats events={events} now={now} />
       )}
     </div>
   )

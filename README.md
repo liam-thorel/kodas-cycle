@@ -3,6 +3,8 @@
 Suivi pipi / caca (et repas, promenades, dodos) d'un chiot, à deux téléphones.
 
 - **1 tap** pour horodater à l'instant, ou saisie **après coup** avec raccourcis −10/−30/−60/−120 min
+- **Promenades et dodos se chronomètrent** : le bouton démarre, affiche le temps qui court, puis termine
+- **Timeline quotidienne** : chaque journée en 24 h, durées en barres et événements ponctuels en points — les dodos à cheval sur minuit apparaissent des deux côtés
 - Chaque entrée est **signée** par la personne qui l'a notée
 - Bandeau **« ça fait combien de temps »** qui passe en alerte au-delà de 3 h sans sortie
 - Statistiques : compte du jour, moyenne par jour, créneaux horaires habituels
@@ -36,4 +38,6 @@ Le schéma SQL ouvre la lecture et l'écriture à toute personne qui atteint le 
 
 ## Personnaliser
 
-Tout est dans [`src/config.ts`](src/config.ts) : nom du chiot, seuil d'alerte, types d'événements (label, emoji, couleur, présence dans les boutons rapides).
+Tout est dans [`src/config.ts`](src/config.ts) : nom du chiot, seuil d'alerte, types d'événements (label, emoji, couleur, présence dans les boutons rapides, et `duration` pour ceux qui se chronomètrent).
+
+Si tu as déjà créé la table Supabase avant l'ajout des durées, rejoue [`supabase/schema.sql`](supabase/schema.sql) : il contient un `alter table … add column if not exists ended_at` qui met la table à jour sans rien perdre.

@@ -18,7 +18,18 @@ export function formatElapsed(fromIso: string, now: number = Date.now()): string
   return formatDuration(now - new Date(fromIso).getTime())
 }
 
-/** "2 h 15", "45 min", "à l'instant". */
+/**
+ * Longueur mesuree : "2 h 15", "45 min", "0 min".
+ * A distinguer de `formatDuration`, qui parle d'un temps ecoule et dit
+ * "à l'instant" — formulation absurde pour un total ou un chrono.
+ */
+export function formatSpan(ms: number): string {
+  const minutes = Math.max(0, Math.floor(ms / 60_000))
+  if (minutes < 1) return '0 min'
+  return formatDuration(ms)
+}
+
+/** Temps ecoule depuis un moment : "2 h 15", "45 min", "à l'instant". */
 export function formatDuration(ms: number): string {
   const minutes = Math.max(0, Math.floor(ms / 60_000))
   if (minutes < 1) return "à l'instant"

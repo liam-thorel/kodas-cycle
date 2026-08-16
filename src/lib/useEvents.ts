@@ -9,6 +9,7 @@ type Row = {
   id: string
   kind: string
   happened_at: string
+  ended_at: string | null
   author: string
   note: string | null
   created_at: string
@@ -19,6 +20,7 @@ function rowToEvent(row: Row): PuppyEvent {
     id: row.id,
     kind: row.kind as PuppyEvent['kind'],
     happenedAt: row.happened_at,
+    endedAt: row.ended_at,
     author: row.author,
     note: row.note,
     createdAt: row.created_at,
@@ -30,14 +32,11 @@ function eventToRow(event: PuppyEvent): Row {
     id: event.id,
     kind: event.kind,
     happened_at: event.happenedAt,
+    ended_at: event.endedAt,
     author: event.author,
     note: event.note,
     created_at: event.createdAt,
   }
-}
-
-function newId(): string {
-  return crypto.randomUUID()
 }
 
 /**
@@ -62,14 +61,16 @@ export function useEvents() {
     const pending = eventsRef.current.filter((e) => e.pending)
 
     try {
-      const inserts = pending.filter((e) => e.pending === 'insert')
-      if (inserts.length > 0) {
-        const { error } = await supabase.from(TABLE).upsert(inserts.map(eventToRow))
+      const upserts = pending.filter((e) => e.pending === 'upsert')
+      if (upserts.length > 0) {
+        const { error } = await supabase.from(TABLE).upsert(upserts.map(eventToRow))
         if (error) throw error
       }
 
       const deletes = pending.filter((e) => e.pending === 'delete')
       if (deletes.length > 0) {
+        // Supprimer une ligne jamais parvenue au serveur est sans effet : pas
+        // besoin de distinguer les suppressions d'entrees encore locales.
         const { error } = await supabase
           .from(TABLE)
           .delete()
@@ -126,13 +127,14 @@ export function useEvents() {
   const addEvent = useCallback(
     (input: NewEvent) => {
       const event: StoredEvent = {
-        id: newId(),
+        id: crypto.randomUUID(),
         kind: input.kind,
         happenedAt: input.happenedAt,
+        endedAt: input.endedAt ?? null,
         author: input.author,
         note: input.note?.trim() ? input.note.trim() : null,
         createdAt: new Date().toISOString(),
-        ...(isSyncConfigured ? { pending: 'insert' as const } : {}),
+        ...(isSyncConfigured ? { pending: 'upsert' as const } : {}),
       }
       commit([...eventsRef.current, event])
       void sync()
@@ -141,12 +143,24 @@ export function useEvents() {
     [commit, sync],
   )
 
+  /** Modification ciblee : sert surtout a poser la fin d'une promenade ou d'un dodo. */
+  const patchEvent = useCallback(
+    (id: string, patch: Partial<Pick<PuppyEvent, 'endedAt' | 'happenedAt' | 'note'>>) => {
+      commit(
+        eventsRef.current.map((e) =>
+          e.id === id
+            ? { ...e, ...patch, ...(isSyncConfigured ? { pending: 'upsert' as const } : {}) }
+            : e,
+        ),
+      )
+      void sync()
+    },
+    [commit, sync],
+  )
+
   const removeEvent = useCallback(
     (id: string) => {
-      const target = eventsRef.current.find((e) => e.id === id)
-      if (!target) return
-      // Jamais parti au serveur : on peut l'effacer franchement.
-      if (!isSyncConfigured || target.pending === 'insert') {
+      if (!isSyncConfigured) {
         commit(eventsRef.current.filter((e) => e.id !== id))
         return
       }
@@ -158,5 +172,5 @@ export function useEvents() {
 
   const visible = events.filter((e) => e.pending !== 'delete')
 
-  return { events: visible, status, addEvent, removeEvent, refresh: sync }
+  return { events: visible, status, addEvent, patchEvent, removeEvent, refresh: sync }
 }

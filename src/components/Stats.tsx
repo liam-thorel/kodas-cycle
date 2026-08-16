@@ -1,10 +1,10 @@
 import { KIND_META } from '../config'
 import { hourlyHistogram, summarize } from '../lib/stats'
-import { formatElapsed } from '../lib/time'
+import { formatSpan, formatElapsed } from '../lib/time'
 import { EVENT_KINDS, type PuppyEvent } from '../types'
 
 /** Vue d'ensemble : combien aujourd'hui, moyenne, et creneaux habituels. */
-export function Stats({ events }: { events: PuppyEvent[] }) {
+export function Stats({ events, now }: { events: PuppyEvent[]; now: number }) {
   const histogram = hourlyHistogram(events)
   const peak = Math.max(...histogram, 1)
 
@@ -12,7 +12,7 @@ export function Stats({ events }: { events: PuppyEvent[] }) {
     <div className="stats">
       <div className="stat-grid">
         {EVENT_KINDS.map((kind) => {
-          const summary = summarize(events, kind)
+          const summary = summarize(events, kind, now)
           const meta = KIND_META[kind]
           return (
             <div key={kind} className="stat" style={{ '--accent': meta.color } as React.CSSProperties}>
@@ -20,11 +20,15 @@ export function Stats({ events }: { events: PuppyEvent[] }) {
                 <span aria-hidden="true">{meta.emoji}</span> {meta.label}
               </div>
               <div className="stat-value">{summary.today}</div>
-              <div className="stat-sub muted">aujourd'hui</div>
+              <div className="stat-sub muted">
+                {summary.durationTodayMs !== null
+                  ? `aujourd'hui · ${formatSpan(summary.durationTodayMs)} au total`
+                  : "aujourd'hui"}
+              </div>
               <div className="stat-foot muted">
                 {summary.perDay !== null ? `≈ ${summary.perDay.toFixed(1)} / jour` : 'pas encore de moyenne'}
                 <br />
-                {summary.last ? `dernier ${formatElapsed(summary.last.happenedAt)}` : 'jamais noté'}
+                {summary.last ? `dernier ${formatElapsed(summary.last.happenedAt, now)}` : 'jamais noté'}
               </div>
             </div>
           )

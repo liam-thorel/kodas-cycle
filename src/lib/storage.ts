@@ -7,15 +7,20 @@ const AUTHOR_KEY = 'kodas-cycle:author:v1'
  * Un evenement tel qu'il vit sur l'appareil. `pending` marque les ecritures
  * qui n'ont pas encore atteint Supabase : elles sont rejouees a la reconnexion,
  * ce qui rend l'app utilisable dans le jardin sans reseau.
+ *
+ * `upsert` couvre la creation et la modification (terminer une promenade),
+ * les deux se resolvant en un seul upsert cote serveur.
  */
-export type StoredEvent = PuppyEvent & { pending?: 'insert' | 'delete' }
+export type StoredEvent = PuppyEvent & { pending?: 'upsert' | 'delete' }
 
 export function readCache(): StoredEvent[] {
   try {
     const raw = localStorage.getItem(EVENTS_KEY)
     if (!raw) return []
     const parsed: unknown = JSON.parse(raw)
-    return Array.isArray(parsed) ? (parsed as StoredEvent[]) : []
+    if (!Array.isArray(parsed)) return []
+    // `endedAt` est arrive apres la v1 : les entrees d'avant n'en ont pas.
+    return (parsed as StoredEvent[]).map((event) => ({ ...event, endedAt: event.endedAt ?? null }))
   } catch {
     return []
   }

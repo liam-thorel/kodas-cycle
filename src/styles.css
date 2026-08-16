@@ -226,6 +226,39 @@ input {
   border-color: var(--accent);
 }
 
+.log-hint {
+  font-size: 11px;
+  color: var(--muted);
+  opacity: 0.7;
+}
+
+/* Duree en cours : le bouton devient un chrono qu'on tape pour arreter. */
+.log-btn-running {
+  background: color-mix(in srgb, var(--accent) 18%, var(--panel));
+  border-color: var(--accent);
+}
+
+.log-running {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.25;
+}
+
+.log-running-time {
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}
+
+.log-running-action {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
 /* ---------- Buttons, chips, fields ---------- */
 
 .btn {
@@ -297,6 +330,11 @@ input {
 .input:focus {
   outline: 2px solid var(--primary);
   outline-offset: 1px;
+}
+
+.field-error {
+  font-size: 12px;
+  color: var(--danger);
 }
 
 .card {
@@ -397,6 +435,168 @@ input {
   gap: 6px;
 }
 
+/* ---------- Rail : la journee de 24 h en vertical ---------- */
+
+.rail {
+  position: relative;
+  margin: 4px 0 10px;
+}
+
+.rail-hour {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transform: translateY(-50%);
+}
+
+.rail-hour-label {
+  width: 30px;
+  flex: none;
+  font-size: 10px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.rail-hour-line {
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+.rail-now {
+  position: absolute;
+  left: 30px;
+  right: 0;
+  transform: translateY(-50%);
+  z-index: 3;
+}
+
+.rail-now-line {
+  display: block;
+  height: 1px;
+  background: color-mix(in srgb, var(--danger) 80%, transparent);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--danger) 60%, transparent);
+}
+
+.rail-bars {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 36px;
+  width: 18px;
+}
+
+.bar {
+  --accent: var(--primary);
+  position: absolute;
+  left: 0;
+  width: 18px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--accent) 55%, transparent);
+  border: 1px solid var(--accent);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  overflow: hidden;
+  z-index: 2;
+}
+
+.bar-emoji {
+  font-size: 10px;
+  padding-top: 2px;
+}
+
+/* Une duree ouverte n'a pas de vraie fin : on ne ferme pas le bas de la barre. */
+.bar-running {
+  background: repeating-linear-gradient(
+    -45deg,
+    color-mix(in srgb, var(--accent) 55%, transparent) 0 5px,
+    transparent 5px 10px
+  );
+}
+
+/* Un dodo a cheval sur minuit : le bout coupe reste droit. */
+.bar-from-before {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  border-top-style: dashed;
+}
+
+.bar-to-after {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  border-bottom-style: dashed;
+}
+
+.rail-instants {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 60px;
+  right: 0;
+}
+
+.mark {
+  --accent: var(--primary);
+}
+
+.mark-dot {
+  position: absolute;
+  left: -6px;
+  width: 8px;
+  height: 8px;
+  margin-top: -4px;
+  border-radius: 50%;
+  background: var(--accent);
+  z-index: 2;
+}
+
+.mark-label {
+  position: absolute;
+  left: 8px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transform: translateY(-50%);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.mark-time {
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+.mark-name {
+  color: var(--text);
+}
+
+.rail-empty {
+  position: absolute;
+  top: 50%;
+  left: 60px;
+  font-size: 13px;
+}
+
+.day-totals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 10px;
+  font-size: 12px;
+}
+
+.day-total {
+  --accent: var(--primary);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* ---------- Lignes de detail ---------- */
+
 .row {
   --accent: var(--primary);
   display: flex;
@@ -438,9 +638,40 @@ input {
 }
 
 .row-time {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
   font-variant-numeric: tabular-nums;
   font-size: 15px;
   color: var(--muted);
+}
+
+.row-time-end {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.row-length {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.row-stop {
+  flex: none;
+  background: var(--accent);
+  border: 0;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 650;
+  color: #14161b;
+  cursor: pointer;
+}
+
+.tag-running {
+  color: var(--ok);
 }
 
 .row-del {
